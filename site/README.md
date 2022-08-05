@@ -83,55 +83,10 @@ The web server will be started on [http://localhost:4000](http://localhost:4000)
 
 As you make changes to the site, the site will automatically rebuild.
 
-## Pushing to site
+# Publishing the website
 
-1. `cd site/target`
-2. `git init`
-3. `git remote add origin https://github.com/apache/calcite-site`
-4. `git reset origin/master --soft`
+Publishing the website is usually simple, you just need to copy the newly generated site content to the [calcite-site](https://github.com/apache/calcite-site) repository.
 
-If you have not regenerated the javadoc and they are missing, restore them:
+But sometimes, especially when we upgraded Jekyll version, the `js` and `css` files may be renamed or removed, copying will not remove these stale files in calcite-site.
 
-6. `git reset -- apidocs/`
-7. `git reset -- testapidocs/`
-8. `git checkout -- apidocs/`
-9. `git checkout -- testapidocs/`
-
-Restore the avatica site
-
-10. `git reset -- avatica/`
-11. `git checkout -- avatica/`
-
-10. `git add .`
-11. Commit: `git commit -m "Your commit message goes here"`
-12. Push the site: `git push origin master`
-
-Within a few minutes, gitpubsub should kick in and you'll be able to
-see the results at
-[calcite.apache.org](https://calcite.apache.org/).
-
-This process also publishes Avatica's web site. Avatica's web site has
-separate source (under `avatica/site`) but configures Jekyll to
-generate files to `site/target/avatica`, which becomes an
-[avatica](https://calcite.apache.org/avatica)
-sub-directory when deployed. See
-[Avatica site README](../avatica/site/README.md).
-
-## Site branch
-
-We want to deploy project changes (for example, new committers, PMC
-members or upcoming talks) immediately, but we want to deploy
-documentation of project features only when that feature appears in a
-release. For this reason, we generally edit the site on the "site" git
-branch.
-
-Before making a release, release manager must ensure that "site" is in
-sync with "master". Immediately after a release, the release manager
-will publish the site, including all of the features that have just
-been released. When making an edit to the site, a Calcite committer
-must commit the change to the git "master" branch (as well as
-git, to publish the site, of course). If the edit is to appear
-on the site immediately, the committer should then cherry-pick the
-change into the "site" branch.  If there have been no feature-related
-changes on the site since the release, then "site" should be a
-fast-forward merge of "master".
+Hence, a safer way is to remove the old files in calcite-site for the first step, then do the copying.
