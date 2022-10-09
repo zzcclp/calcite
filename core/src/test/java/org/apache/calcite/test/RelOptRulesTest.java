@@ -166,6 +166,7 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
@@ -2985,14 +2986,32 @@ public class RelOptRulesTest extends RelOptTestBase {
     sql(sql).with(program).check();
   }
 
-  @Test public void testEmptyJoin() {
-    HepProgram program = new HepProgramBuilder()
-        .addRuleInstance(ReduceExpressionsRule.FILTER_INSTANCE)
-        .addRuleInstance(PruneEmptyRules.PROJECT_INSTANCE)
-        .addRuleInstance(PruneEmptyRules.JOIN_LEFT_INSTANCE)
-        .addRuleInstance(PruneEmptyRules.JOIN_RIGHT_INSTANCE)
-        .build();
+  @Test void testEmptyTable() {
+    // table is transformed to empty values and extra project will be removed.
+    final String sql = "select * from EMPTY_PRODUCTS\n";
+    sql(sql)
+        .withRule(
+            PruneEmptyRules.EMPTY_TABLE_INSTANCE,
+            PruneEmptyRules.PROJECT_INSTANCE)
+        .check();
+  }
 
+  @Test void testEmptyTableTransformsComplexQueryToSingleTableScan() {
+    final String sql = "select products.PRODUCTID, products.NAME from products left join\n"
+        + "(select * from products as e\n"
+        + " inner join EMPTY_PRODUCTS as d on e.PRODUCTID = d.PRODUCTID\n"
+        + " where e.SUPPLIERID > 10) dt\n"
+        + " on products.PRODUCTID = dt.PRODUCTID";
+    Collection<RelOptRule> rules = Arrays.asList(
+        PruneEmptyRules.EMPTY_TABLE_INSTANCE,
+        PruneEmptyRules.JOIN_RIGHT_INSTANCE,
+        PruneEmptyRules.FILTER_INSTANCE,
+        PruneEmptyRules.PROJECT_INSTANCE,
+        CoreRules.PROJECT_MERGE);
+    sql(sql).withProgram(HepProgram.builder().addRuleCollection(rules).build()).check();
+  }
+
+  @Test void testLeftEmptyInnerJoin() {
     // Plan should be empty
     final String sql = "select * from (\n"
         + "select * from emp where false) as e\n"
