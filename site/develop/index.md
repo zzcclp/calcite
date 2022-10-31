@@ -58,6 +58,57 @@ The HOWTO describes how to
 [run more or fewer tests]({{ site.baseurl }}/docs/howto.html#running-tests) and
 [run integration tests]({{ site.baseurl }}/docs/howto.html#running-integration-tests).
 
+## JIRA accounts
+Calcite uses [JIRA](https://issues.apache.org/jira/browse/CALCITE) for issues/case management.
+You must have a JIRA account in order to log cases and issues.
+
+### I already have an ASF JIRA account and want to be added as a contributor
+If you already have an ASF JIRA account, you do not need to sign up for a
+new account. Please email [jira-requests@calcite.apache.org](mailto:jira-requests@calcite.apache.org)
+using the following template, so that we can add your account to the
+contributors list in JIRA:
+
+[**[Open the template in your email client]**](mailto:jira-requests@calcite.apache.org?subject=Add%20me%20as%20a%20contributor%20to%20JIRA&body=Hello,%0A%0APlease%20add%20me%20as%20a%20contributor%20to%20JIRA.%0AMy%20JIRA%20username%20is:%20[INSERT%20YOUR%20JIRA%20USERNAME%20HERE]%0A%0AThanks,%0A[INSERT%20YOUR%20NAME%20HERE])
+{% highlight text %}
+Subject: Add me as a contributor to JIRA
+
+Hello,
+
+Please add me as a contributor to JIRA.
+My JIRA username is: [INSERT YOUR JIRA USERNAME HERE]
+
+Thanks,
+[INSERT YOUR NAME HERE]
+{% endhighlight %}
+
+
+### I do not have an ASF JIRA account, want to request an account and be added as a contributor
+In order to request an ASF JIRA account, you will need to email
+[jira-requests@calcite.apache.org](mailto:jira-requests@calcite.apache.org)
+using the following template:
+
+[**[Open the template in your email client]**](mailto:jira-requests@calcite.apache.org?subject=Request%20for%20JIRA%20Account&body=Hello,%0A%0AI%20would%20like%20to%20request%20a%20JIRA%20account.%0AMy%20proposed%20JIRA%20username:%20[INSERT%20YOUR%20DESIRED%20JIRA%20USERNAME%20HERE%20(LOWERCASE%20LETTERS%20AND%20NUMBERS%20ONLY)]%0AMy%20full%20name:%20[INSERT%20YOUR%20FULL%20NAME%20HERE]%0AMy%20email%20address:%20[INSERT%20YOUR%20EMAIL%20ADDRESS%20HERE]%0A%0AThanks,%0A[INSERT%20YOUR%20NAME%20HERE])
+{% highlight text %}
+Subject: Request for JIRA Account
+
+Hello,
+
+I would like to request a JIRA account.
+My proposed JIRA username: [INSERT YOUR DESIRED JIRA USERNAME HERE (LOWERCASE LETTERS AND NUMBERS ONLY)]
+My full name: [INSERT YOUR FULL NAME HERE]
+My email address: [INSERT YOUR EMAIL ADDRESS HERE]
+
+Thanks,
+[INSERT YOUR NAME HERE]
+{% endhighlight %}
+
+**IMPORTANT**: The email address the request is sent from MUST be the same
+as the email address in the body of the request, otherwise, we will not be
+able to process your request.
+
+Once the ASF has processed our submission on your behalf, you will receive
+an email to set your password.
+
 ## Contributing
 
 We welcome contributions.
@@ -81,7 +132,7 @@ summary line. If you remove information while clarifying, put it in
 the description of the case.
 
 Design discussions may happen in various places (email threads,
-github reviews) but the JIRA case is the canonical place for those
+Github reviews) but the JIRA case is the canonical place for those
 discussions. Link to them or summarize them in the case.
 
 When implementing a case, especially a new feature, make sure
@@ -105,8 +156,8 @@ feel free to tag the respective contributor(s) in the discussion.
 
 If you are going to take on the issue right away assign it to yourself.
 To assign issues to yourself you have to be registered in JIRA as a contributor.
-In order to do that, send an email to the developers list
-and provide your JIRA username.
+In order to do that, please follow the instructions outlined in the
+[JIRA Accounts](#jira-accounts) section.
 
 If you are committed to fixing the issue before the upcoming release set
 the fix version accordingly (e.g., 1.20.0), otherwise leave it as blank.
@@ -191,7 +242,117 @@ In the special case, that the Travis CI build failed and the failure is not
 caused by your changes create an empty commit (`git commit --allow-empty`) and
 push it.
 
-## Continuous Integration Testing
+## Null safety
+
+Apache Calcite uses the Checker Framework to avoid unexpected `NullPointerExceptions`.
+You might find a detailed documentation at https://checkerframework.org/
+
+Note: only main code is verified for now, so nullness annotation is not enforced in test code.
+
+To execute the Checker Framework locally please use the following command:
+
+    ./gradlew -PenableCheckerframework :linq4j:classes :core:classes
+
+Here's a small introduction to null-safe programming:
+
+* By default, parameters, return values and fields are non-nullable, so refrain from using `@NonNull`
+* Local variables infer nullness from the expression, so you can write `Object v = ...` instead of `@Nullable Object v = ...`
+* Avoid the use of `javax.annotation.*` annotations. The annotations from `jsr305` do not support cases like `List<@Nullable String>`
+so it is better to stick with `org.checkerframework.checker.nullness.qual.Nullable`.
+  Unfortunately, Guava (as of `29-jre`) has **both** `jsr305` and `checker-qual` dependencies at the same time,
+  so you might want to configure your IDE to exclude `javax.annotation.*` annotations from code completion.
+
+* The Checker Framework verifies code method by method. That means, it can't account for method execution order.
+  That is why `@Nullable` fields should be verified in each method where they are used.
+  If you split logic into multiple methods, you might want verify null once, then pass it via non-nullable parameters.
+  For fields that start as null and become non-null later, use `@MonotonicNonNull`.
+  For fields that have already been checked against null, use `@RequiresNonNull`.
+
+* If you are absolutely sure the value is non-null, you might use `org.apache.calcite.linq4j.Nullness.castNonNull(T)`.
+  The intention behind `castNonNull` is like `trustMeThisIsNeverNullHoweverTheVerifierCantTellYet(...)`
+
+* If the expression is nullable, however, you need to pass it to a non-null method, use `Objects.requireNonNull`.
+  It allows to have a better error message that includes context information.
+
+* The Checker Framework comes with an annotated JDK, however, there might be invalid annotations.
+  In that cases, stub files can be placed to `/src/main/config/checkerframework` to override the annotations.
+  It is important the files have `.astub` extension otherwise they will be ignored.
+
+* In array types, a type annotation appears immediately before the type component (either the array or the array component) it refers to.
+  This is explained in the [Java Language Specification](https://docs.oracle.com/javase/specs/jls/se8/html/jls-9.html#jls-9.7.4).
+
+        String nonNullable;
+        @Nullable String nullable;
+
+        java.lang.@Nullable String fullyQualifiedNullable;
+
+        // array and elements: non-nullable
+        String[] x;
+
+        // array: nullable, elements: non-nullable
+        String @Nullable [] x;
+
+        // array: non-nullable, elements: nullable
+        @Nullable String[] x;
+
+        // array: nullable, elements: nullable
+        @Nullable String @Nullable [] x;
+
+        // arrays: nullable, elements: nullable
+        // x: non-nullable
+        // x[0]: non-nullable
+        // x[0][0]: nullable
+        @Nullable String[][] x;
+
+        // x: nullable
+        // x[0]: non-nullable
+        // x[0][0]: non-nullable
+        String @Nullable [][] x;
+
+        // x: non-nullable
+        // x[0]: nullable
+        // x[0][0]: non-nullable
+        String[] @Nullable [] x;
+
+* By default, generic parameters can be both nullable and non-nullable:
+
+        class Holder<T> { // can be both nullable
+            final T value;
+            T get() {
+                return value; // works
+            }
+            int hashCode() {
+                return value.hashCode(); // error here since T can be nullable
+            }
+
+* However, default bounds are non-nullable, so if you write `<T extends Number>`,
+  then it is the same as `<T extends @NonNull Number>`.
+
+        class Holder<T extends Number> { // note how this T never permits nulls
+            final T value;
+            Holder(T value) {
+                this.value = value;
+            }
+            static <T> Holder<T> empty() {
+                return new Holder<>(null); // fails since T must be non-nullable
+            }
+
+* If you need "either nullable or non-nullable `Number`", then use `<T extends @Nullable Number>`,
+
+* If you need to ensure the type is **always** nullable, then use `<@Nullable T>` as follows:
+
+        class Holder<@Nullable T> { // note how this requires T to always be nullable
+            protected T get() { // Default implementation.
+                // Default implementation returns null, so it requires that T must always be nullable
+                return null;
+            }
+            static void useHolder() {
+                // T is declared as <@Nullable T>, so Holder<String> would not compile
+                Holder<@Nullable String> holder = ...;
+                String value = holder.get();
+            }
+
+## Continuous integration testing
 
 Calcite has a collection of Jenkins jobs on ASF-hosted infrastructure.
 They are all organized in a single view and available at
