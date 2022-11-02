@@ -1855,10 +1855,12 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
       new SqlCurrentDateFunction();
 
   /** The <code>TIMESTAMPADD</code> function. */
-  public static final SqlFunction TIMESTAMP_ADD = new SqlTimestampAddFunction();
+  public static final SqlFunction TIMESTAMP_ADD =
+      new SqlTimestampAddFunction("TIMESTAMPADD");
 
   /** The <code>TIMESTAMPDIFF</code> function. */
-  public static final SqlFunction TIMESTAMP_DIFF = new SqlTimestampDiffFunction();
+  public static final SqlFunction TIMESTAMP_DIFF =
+      new SqlTimestampDiffFunction("TIMESTAMPDIFF");
 
   /**
    * Use of the <code>IN_FENNEL</code> operator forces the argument to be
@@ -1904,7 +1906,7 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
    * <code>EXTRACT(HOUR FROM INTERVAL '364 23:59:59')</code> returns <code>
    * 23</code>
    */
-  public static final SqlFunction EXTRACT = new SqlExtractFunction();
+  public static final SqlFunction EXTRACT = new SqlExtractFunction("EXTRACT");
 
   /**
    * The SQL <code>YEAR</code> operator. Returns the Year

@@ -2241,10 +2241,14 @@ To enable an operator table, set the
 [fun]({{ site.baseurl }}/docs/adapter.html#jdbc-connect-string-parameters)
 connect string parameter.
 
-The 'C' (compatibility) column contains value
-'m' for MySQL ('fun=mysql' in the connect string),
-'o' for Oracle ('fun=oracle' in the connect string),
-'p' for PostgreSQL ('fun=postgresql' in the connect string).
+The 'C' (compatibility) column contains value:
+* 'b' for Google BigQuery ('fun=bigquery' in the connect string),
+* 'h' for Apache Hive ('fun=hive' in the connect string),
+* 'm' for MySQL ('fun=mysql' in the connect string),
+* 'q' for Microsoft SQL Server ('fun=mssql' in the connect string),
+* 'o' for Oracle ('fun=oracle' in the connect string),
+* 'p' for PostgreSQL ('fun=postgresql' in the connect string),
+* 's' for Apache Spark ('fun=spark' in the connect string).
 
 One operator name may correspond to multiple SQL dialects, but with different
 semantics.
@@ -2256,6 +2260,12 @@ semantics.
 | m o p | CONCAT(string [, string ]*)                | Concatenates two or more strings
 | p | CONVERT_TIMEZONE(tz1, tz2, datetime)           | Converts the timezone of *datetime* from *tz1* to *tz2*
 | m | DAYNAME(datetime)                              | Returns the name, in the connection's locale, of the weekday in *datetime*; for example, it returns '星期日' for both DATE '2020-02-10' and TIMESTAMP '2020-02-10 10:10:10'
+| b | DATE(string)                                   | Equivalent to `CAST(string AS DATE)`
+| p q | DATEADD(timeUnit, integer, datetime)         | Equivalent to `TIMESTAMPADD(timeUnit, integer, datetime)`
+| p q | DATEDIFF(timeUnit, datetime, datetime2)      | Equivalent to `TIMESTAMPDIFF(timeUnit, datetime, datetime2)`
+| q | DATEPART(timeUnit, datetime)                   | Equivalent to `EXTRACT(timeUnit FROM  datetime)`
+| b | DATE_FROM_UNIX_DATE(integer)                   | Returns the DATE that is *integer* days after 1970-01-01
+| p | DATE_PART(timeUnit, datetime)                  | Equivalent to `EXTRACT(timeUnit FROM  datetime)`
 | o | DECODE(value, value1, result1 [, valueN, resultN ]* [, default ]) | Compares *value* to each *valueN* value one by one; if *value* is equal to a *valueN*, returns the corresponding *resultN*, else returns *default*, or NULL if *default* is not specified
 | p | DIFFERENCE(string, string)                     | Returns a measure of the similarity of two strings, namely the number of character positions that their `SOUNDEX` values have in common: 4 if the `SOUNDEX` values are same and 0 if the `SOUNDEX` values are totally different
 | o | GREATEST(expr [, expr ]*)                      | Returns the greatest of the expressions
@@ -2289,6 +2299,11 @@ semantics.
 
 Note:
 
+* Calcite has no Redshift library, so the Postgres library
+  is used instead. The functions `DATEADD`, `DATEDIFF` are
+  implemented in Redshift and not Postgres but nevertheless
+  appear in Calcite's Postgres library
+* Functions `DATEADD`, `DATEDIFF`, `DATE_PART` require the Babel parser
 * `JSON_TYPE` / `JSON_DEPTH` / `JSON_PRETTY` / `JSON_STORAGE_SIZE` return null if the argument is null
 * `JSON_LENGTH` / `JSON_KEYS` / `JSON_REMOVE` return null if the first argument is null
 * `JSON_TYPE` generally returns an upper-case string flag indicating the type of the JSON input. Currently supported supported type flags are:

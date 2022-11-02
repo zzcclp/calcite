@@ -18,11 +18,18 @@ package org.apache.calcite.sql.fun;
 
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.sql.SqlAggFunction;
+import org.apache.calcite.sql.SqlBinaryOperator;
+import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlOperatorTable;
+import org.apache.calcite.sql.SqlSpecialOperator;
+import org.apache.calcite.sql.SqlSyntax;
+import org.apache.calcite.sql.SqlWriter;
+import org.apache.calcite.sql.type.InferTypes;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlOperandCountRanges;
@@ -33,6 +40,9 @@ import org.apache.calcite.sql.type.SqlTypeTransforms;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.apache.calcite.sql.fun.SqlLibrary.BIG_QUERY;
+import static org.apache.calcite.sql.fun.SqlLibrary.HIVE;
+import static org.apache.calcite.sql.fun.SqlLibrary.MSSQL;
 import static org.apache.calcite.sql.fun.SqlLibrary.MYSQL;
 import static org.apache.calcite.sql.fun.SqlLibrary.ORACLE;
 import static org.apache.calcite.sql.fun.SqlLibrary.POSTGRESQL;
@@ -61,6 +71,44 @@ public abstract class SqlLibraryOperators {
           null,
           OperandTypes.CHARACTER_CHARACTER_DATETIME,
           SqlFunctionCategory.TIMEDATE);
+
+  /** The "DATEADD(timeUnit, numeric, datetime)" function
+   * (Microsoft SQL Server, Redshift, Snowflake). */
+  @LibraryOperator(libraries = {MSSQL, POSTGRESQL})
+  public static final SqlFunction DATEADD =
+      new SqlTimestampAddFunction("DATEADD");
+
+  /** The "DATEDIFF(timeUnit, datetime, datetime2)" function
+   * (Microsoft SQL Server, Redshift, Snowflake).
+   *
+   * <p>MySQL has "DATEDIFF(date, date2)" and "TIMEDIFF(time, time2)" functions
+   * but Calcite does not implement these because they have no "timeUnit"
+   * argument. */
+  @LibraryOperator(libraries = {MSSQL, POSTGRESQL})
+  public static final SqlFunction DATEDIFF =
+      new SqlTimestampDiffFunction("DATEDIFF");
+
+  /** The "DATE_PART(timeUnit, datetime)" function
+   * (Databricks, Postgres, Redshift, Snowflake). */
+  @LibraryOperator(libraries = {POSTGRESQL})
+  public static final SqlFunction DATE_PART =
+      new SqlExtractFunction("DATE_PART") {
+        @Override public void unparse(SqlWriter writer, SqlCall call,
+            int leftPrec, int rightPrec) {
+          getSyntax().unparse(writer, this, call, leftPrec, rightPrec);
+        }
+      };
+
+  /** The "DATEPART(timeUnit, datetime)" function
+   * (Microsoft SQL Server). */
+  @LibraryOperator(libraries = {MSSQL})
+  public static final SqlFunction DATEPART =
+      new SqlExtractFunction("DATEPART") {
+        @Override public void unparse(SqlWriter writer, SqlCall call,
+            int leftPrec, int rightPrec) {
+          getSyntax().unparse(writer, this, call, leftPrec, rightPrec);
+        }
+      };
 
   /** Return type inference for {@code DECODE}. */
   private static final SqlReturnTypeInference DECODE_RETURN_TYPE =

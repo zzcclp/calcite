@@ -45,7 +45,10 @@ public enum SqlLibrary {
   /** Geospatial operators. */
   SPATIAL("s"),
   /** A collection of operators that are in MySQL but not in standard SQL. */
-  MYSQL("m"),
+  MYSQL("m", "mysql"),
+  /** A collection of operators that are in Microsoft SQL Server (MSSql) but not
+   * in standard SQL. */
+  MSSQL("q", "mssql"),
   /** A collection of operators that are in Oracle but not in standard SQL. */
   ORACLE("o"),
   /** A collection of operators that are in PostgreSQL but not in standard
