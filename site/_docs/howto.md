@@ -528,6 +528,11 @@ When the dry-run has succeeded, change `install` to `deploy`.
 
 Before you start:
 
+* Consult the [release dashboard](https://issues.apache.org/jira/secure/Dashboard.jspa?selectPageId=12333950) to get a
+ quick overview about the state of the release and take appropriate actions in order to resolve pending tickets or
+ move them to another release/backlog.
+* Send an email to [dev@calcite.apache.org](mailto:dev@calcite.apache.org) notifying that RC build process
+  is starting and therefore `main` branch is in code freeze until further notice.
 * Set up signing keys as described above.
 * Make sure you are using JDK 8 (not 9 or 10).
 * Check that `README` and `site/_docs/howto.md` have the correct version number.
@@ -914,7 +919,9 @@ with a change comment
 (fill in release number and date appropriately).
 Uncheck "Send mail for this update". Under the [releases tab](https://issues.apache.org/jira/projects/CALCITE?selectedItem=com.atlassian.jira.jira-projects-plugin%3Arelease-page&status=released-unreleased)
 of the Calcite project mark the release X.Y.Z as released. If it does not already exist create also
-a new version (e.g., X.Y+1.Z) for the next release.
+a new version (e.g., X.Y+1.Z) for the next release. In order to make the [release dashboard](https://issues.apache.org/jira/secure/Dashboard.jspa?selectPageId=12333950)
+reflect state of the next release, change the fixVersion in the [JIRA filter powering the dashboard](https://issues.apache.org/jira/issues/?filter=12346388)
+and save the changes.
 
 After 24 hours, announce the release by sending an email to
 [announce@apache.org](https://mail-archives.apache.org/mod_mbox/www-announce/).
