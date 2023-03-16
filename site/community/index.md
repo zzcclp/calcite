@@ -91,6 +91,80 @@ Want to learn more about Calcite?
 Watch some presentations and read through some slide decks about
 Calcite, or attend one of the [upcoming talks](#upcoming-talks).
 
+## Adding measures to Calcite SQL
+
+At [Calcite Virtual Meetup](https://www.meetup.com/apache-calcite/events/291489488/), March 2023;
+[[slides](https://www.slideshare.net/julianhyde/adding-measures-to-calcite-sql)],
+[[video](https://youtu.be/COFQrSEX_iI)].
+
+## Building a streaming incremental view maintenance engine with Calcite
+
+At [Calcite Virtual Meetup](https://www.meetup.com/apache-calcite/events/291489488/), March 2023;
+[[slides](http://budiu.info/work/dbsp-calcite23.pptx)],
+[[video](https://youtu.be/iT4k5DCnvPU)].
+
+## Debugging planning issues using Calcite's built in loggers
+
+At [Calcite Virtual Meetup](https://www.meetup.com/apache-calcite/events/291489488/), March 2023;
+[[summary](https://github.com/zabetak/slides/blob/master/2023/calcite-meetup-march/debugging-planning-issues-using-calcites-built-in-loggers.md)],
+[[slides](https://www.slideshare.net/StamatisZampetakis/debugging-planning-issues-using-calcites-builtin-loggers)],
+[[pdf](https://github.com/zabetak/slides/blob/master/2023/calcite-meetup-march/debugging-planning-issues-using-calcites-built-in-loggers.pdf)],
+[[video](https://youtu.be/_phzRNCWJfw)].
+
+## calcite-clj - Use Calcite with Clojure
+
+At [Calcite Virtual Meetup](https://www.meetup.com/Apache-Calcite/events/282836907/), January 2022;
+[[slides](https://ieugen.github.io/calcite-clj/)],
+[[video](https://www.youtube.com/watch?v=9CUWX8JHA90)],
+[[code](https://github.com/ieugen/calcite-clj)].
+
+## Morel, a functional query language (Julian Hyde)
+
+At [Strange Loop 2021](https://thestrangeloop.com/2021/morel-a-functional-query-language.html),
+St. Louis, Missouri, September 30, 2021;
+[[slides](https://www.slideshare.net/julianhyde/morel-a-functional-query-language)].
+
+## Building modern SQL query optimizers with Apache Calcite
+
+At [ApacheCon 2021](https://www.apachecon.com/acah2021/tracks/bigdatasql.html), September 22, 2021.
+
+## Apache Calcite Tutorial
+
+At [BOSS 2021](https://boss-workshop.github.io/boss-2021/), Copenhagen, Denmark, August 16, 2021;
+[[summary](https://github.com/zabetak/slides/blob/master/2021/boss-workshop/apache-calcite-tutorial.md)],
+[[slides](https://www.slideshare.net/StamatisZampetakis/apache-calcite-tutorial-boss-21)],
+[[pdf](https://github.com/zabetak/slides/blob/master/2021/boss-workshop/apache-calcite-tutorial.pdf)],
+[[video](https://youtu.be/meI0W12f_nw)].
+
+## An introduction to query processing & Apache Calcite
+
+At [Calcite Virtual Meetup](https://www.meetup.com/Apache-Calcite/events/275461117/), January 20, 2021;
+[[summary](https://github.com/zabetak/slides/blob/master/2021/calcite-meetup-january/an-introduction-to-query-processing-and-apache-calcite.md)],
+[[slides](https://github.com/zabetak/slides/blob/master/2021/calcite-meetup-january/an-introduction-to-query-processing-and-apache-calcite.pdf)],
+[[video](https://youtu.be/p1O3E33FIs8)].
+
+## Calcite streaming for event-time semantics
+
+At [Calcite Virtual Meetup](https://www.meetup.com/Apache-Calcite/events/275461117/), January 20, 2021;
+[[video](https://youtu.be/n4NU8J1DlWI)].
+
+## Efficient spatial queries on vanilla databases
+
+At [Calcite Virtual Meetup](https://www.meetup.com/Apache-Calcite/events/275461117/), January 20, 2021;
+[[video](https://youtu.be/6iozdGUL-aw)].
+
+## Apache Calcite integration in Hazelcast In-Memory Data Grid
+
+At [Calcite Virtual Meetup](https://www.meetup.com/Apache-Calcite/events/275461117/), January 20, 2021;
+[[video](https://youtu.be/2cKE4HyhIrc)].
+
+## Fast federated SQL with Apache Calcite
+
+At [ApacheCon Europe 2019](https://aceu19.apachecon.com/), Berlin, Germany, October 24, 2019;
+[[summary](https://aceu19.apachecon.com/session/fast-federated-sql-apache-calcite)],
+[[video](https://youtu.be/4JAOkLKrcYE)].
+
+
 ## One SQL to Rule Them All - an Efficient and Syntactically Idiomatic Approach to Management of Streams and Tables
 
 At [SIGMOD/PODS 2019](https://sigmod2019.org/sigmod_industry_list), Amsterdam, Netherlands, 2019
