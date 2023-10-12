@@ -61,6 +61,8 @@ import org.apache.calcite.tools.Programs;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.tools.RuleSet;
 import org.apache.calcite.tools.RuleSets;
+import org.apache.calcite.util.ConversionUtil;
+import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.TestUtil;
 import org.apache.calcite.util.Util;
 
@@ -186,7 +188,103 @@ public class RelToSqlConverterTest {
 
   @Test public void testSimpleSelectStarFromProductTable() {
     String query = "select * from \"product\"";
-    sql(query).ok("SELECT *\nFROM \"foodmart\".\"product\"");
+    String expected = "SELECT *\n"
+        + "FROM \"foodmart\".\"product\"";
+    sql(query).ok(expected);
+  }
+
+  /** Test case for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-4901">[CALCITE-4901]
+   * JDBC adapter incorrectly adds ORDER BY columns to the SELECT list</a>. */
+  @Test void testOrderByNotInSelectList() {
+    // Before 4901 was fixed, the generated query would have "product_id" in its
+    // SELECT clause.
+    String query = "select count(1) as c\n"
+        + "from \"foodmart\".\"product\"\n"
+        + "group by \"product_id\"\n"
+        + "order by \"product_id\" desc";
+    final String expected = "SELECT COUNT(*) AS \"C\"\n"
+        + "FROM \"foodmart\".\"product\"\n"
+        + "GROUP BY \"product_id\"\n"
+        + "ORDER BY \"product_id\" DESC";
+    sql(query).ok(expected);
+  }
+
+  /** Test case for <a href="https://issues.apache.org/jira/browse/CALCITE-6006">[CALCITE-6006]</a>
+   * RelToSqlConverter loses charset information. */
+  @Test void testCharset() {
+    sql("select _UTF8'\u4F60\u597D'")
+        .withMysql() // produces a simpler output query
+        .ok("SELECT _UTF-8'\u4F60\u597D'");
+    sql("select _UTF16'" + ConversionUtil.TEST_UNICODE_STRING + "'")
+        .withMysql()
+        .ok("SELECT _UTF-16LE'" + ConversionUtil.TEST_UNICODE_STRING + "'");
+  }
+
+  /** Test case for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-4321">[CALCITE-4321]
+   * JDBC adapter omits FILTER (WHERE ...) expressions when generating SQL</a>
+   * and
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-5270">[CALCITE-5270]
+   * JDBC adapter should not generate FILTER (WHERE) in Firebolt dialect</a>. */
+  @Test void testAggregateFilterWhere() {
+    String query = "select\n"
+        + "  sum(\"shelf_width\") filter (where \"net_weight\" > 0),\n"
+        + "  sum(\"shelf_width\")\n"
+        + "from \"foodmart\".\"product\"\n"
+        + "where \"product_id\" > 0\n"
+        + "group by \"product_id\"";
+    final String expectedDefault = "SELECT"
+        + " SUM(\"shelf_width\") FILTER (WHERE \"net_weight\" > 0 IS TRUE),"
+        + " SUM(\"shelf_width\")\n"
+        + "FROM \"foodmart\".\"product\"\n"
+        + "WHERE \"product_id\" > 0\n"
+        + "GROUP BY \"product_id\"";
+    final String expectedBigQuery = "SELECT"
+        + " SUM(CASE WHEN net_weight > 0 IS TRUE"
+        + " THEN shelf_width ELSE NULL END), "
+        + "SUM(shelf_width)\n"
+        + "FROM foodmart.product\n"
+        + "WHERE product_id > 0\n"
+        + "GROUP BY product_id";
+    final String expectedFirebolt = "SELECT"
+        + " SUM(CASE WHEN \"net_weight\" > 0 IS TRUE"
+        + " THEN \"shelf_width\" ELSE NULL END), "
+        + "SUM(\"shelf_width\")\n"
+        + "FROM \"foodmart\".\"product\"\n"
+        + "WHERE \"product_id\" > 0\n"
+        + "GROUP BY \"product_id\"";
+    sql(query).ok(expectedDefault)
+        .withBigQuery().ok(expectedBigQuery)
+        .withFirebolt().ok(expectedFirebolt);
+  }
+
+  @Test void testPivotToSqlFromProductTable() {
+    String query = "select * from (\n"
+        + "  select \"shelf_width\", \"net_weight\", \"product_id\"\n"
+        + "  from \"foodmart\".\"product\")\n"
+        + "  pivot (sum(\"shelf_width\") as w, count(*) as c\n"
+        + "    for (\"product_id\") in (10, 20))";
+    final String expected = "SELECT \"net_weight\","
+        + " SUM(\"shelf_width\") FILTER (WHERE \"product_id\" = 10) AS \"10_W\","
+        + " COUNT(*) FILTER (WHERE \"product_id\" = 10) AS \"10_C\","
+        + " SUM(\"shelf_width\") FILTER (WHERE \"product_id\" = 20) AS \"20_W\","
+        + " COUNT(*) FILTER (WHERE \"product_id\" = 20) AS \"20_C\"\n"
+        + "FROM \"foodmart\".\"product\"\n"
+        + "GROUP BY \"net_weight\"";
+    // BigQuery does not support FILTER, so we generate CASE around the
+    // arguments to the aggregate functions.
+    final String expectedBigQuery = "SELECT net_weight,"
+        + " SUM(CASE WHEN product_id = 10 "
+        + "THEN shelf_width ELSE NULL END) AS `10_W`,"
+        + " COUNT(CASE WHEN product_id = 10 THEN 1 ELSE NULL END) AS `10_C`,"
+        + " SUM(CASE WHEN product_id = 20 "
+        + "THEN shelf_width ELSE NULL END) AS `20_W`,"
+        + " COUNT(CASE WHEN product_id = 20 THEN 1 ELSE NULL END) AS `20_C`\n"
+        + "FROM foodmart.product\n"
+        + "GROUP BY net_weight";
+    sql(query).ok(expected)
+        .withBigQuery().ok(expectedBigQuery);
   }
 
   @Test public void testSimpleSelectQueryFromProductTable() {

@@ -16,6 +16,7 @@
  */
 package org.apache.calcite.rel.rel2sql;
 
+import org.apache.calcite.config.CalciteSystemProperty;
 import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.linq4j.tree.Expressions;
 import org.apache.calcite.rel.RelFieldCollation;
@@ -68,6 +69,11 @@ import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.calcite.util.DateString;
+import org.apache.calcite.util.ImmutableBitSet;
+import org.apache.calcite.util.NlsString;
+import org.apache.calcite.util.Pair;
+import org.apache.calcite.util.RangeSets;
+import org.apache.calcite.util.Sarg;
 import org.apache.calcite.util.TimeString;
 import org.apache.calcite.util.TimestampString;
 
@@ -916,8 +922,185 @@ public abstract class SqlImplementor {
       return node;
     }
 
-    public SqlImplementor implementor() {
-      throw new UnsupportedOperationException();
+    public abstract SqlImplementor implementor();
+
+    /** Converts a {@link Range} to a SQL expression.
+     *
+     * @param <C> Value type */
+    private static class RangeToSql<C extends Comparable<C>>
+        implements RangeSets.Consumer<C> {
+      private final List<SqlNode> list;
+      private final Function<C, SqlNode> literalFactory;
+      private final SqlNode arg;
+
+      RangeToSql(SqlNode arg, List<SqlNode> list,
+          Function<C, SqlNode> literalFactory) {
+        this.arg = arg;
+        this.list = list;
+        this.literalFactory = literalFactory;
+      }
+
+      private void addAnd(SqlNode... nodes) {
+        list.add(
+            SqlUtil.createCall(SqlStdOperatorTable.AND, POS,
+                ImmutableList.copyOf(nodes)));
+      }
+
+      private SqlNode op(SqlOperator op, C value) {
+        return op.createCall(POS, arg, literalFactory.apply(value));
+      }
+
+      @Override public void all() {
+        list.add(SqlLiteral.createBoolean(true, POS));
+      }
+
+      @Override public void atLeast(C lower) {
+        list.add(op(SqlStdOperatorTable.GREATER_THAN_OR_EQUAL, lower));
+      }
+
+      @Override public void atMost(C upper) {
+        list.add(op(SqlStdOperatorTable.LESS_THAN_OR_EQUAL, upper));
+      }
+
+      @Override public void greaterThan(C lower) {
+        list.add(op(SqlStdOperatorTable.GREATER_THAN, lower));
+      }
+
+      @Override public void lessThan(C upper) {
+        list.add(op(SqlStdOperatorTable.LESS_THAN, upper));
+      }
+
+      @Override public void singleton(C value) {
+        list.add(op(SqlStdOperatorTable.EQUALS, value));
+      }
+
+      @Override public void closed(C lower, C upper) {
+        addAnd(op(SqlStdOperatorTable.GREATER_THAN_OR_EQUAL, lower),
+            op(SqlStdOperatorTable.LESS_THAN_OR_EQUAL, upper));
+      }
+
+      @Override public void closedOpen(C lower, C upper) {
+        addAnd(op(SqlStdOperatorTable.GREATER_THAN_OR_EQUAL, lower),
+            op(SqlStdOperatorTable.LESS_THAN, upper));
+      }
+
+      @Override public void openClosed(C lower, C upper) {
+        addAnd(op(SqlStdOperatorTable.GREATER_THAN, lower),
+            op(SqlStdOperatorTable.LESS_THAN_OR_EQUAL, upper));
+      }
+
+      @Override public void open(C lower, C upper) {
+        addAnd(op(SqlStdOperatorTable.GREATER_THAN, lower),
+            op(SqlStdOperatorTable.LESS_THAN, upper));
+      }
+    }
+  }
+
+  /** Converts a {@link RexLiteral} in the context of a {@link RexProgram}
+   * to a {@link SqlNode}. */
+  public static SqlNode toSql(@Nullable RexProgram program, RexLiteral literal) {
+    switch (literal.getTypeName()) {
+    case SYMBOL:
+      final Enum symbol = (Enum) literal.getValue();
+      return SqlLiteral.createSymbol(symbol, POS);
+
+    case ROW:
+      //noinspection unchecked
+      final List<RexLiteral> list = castNonNull(literal.getValueAs(List.class));
+      return SqlStdOperatorTable.ROW.createCall(POS,
+          list.stream().map(e -> toSql(program, e))
+              .collect(Util.toImmutableList()));
+
+    case SARG:
+      final Sarg arg = literal.getValueAs(Sarg.class);
+      throw new AssertionError("sargs [" + arg
+          + "] should be handled as part of predicates, not as literals");
+
+    default:
+      return toSql(literal);
+    }
+  }
+
+  /** Converts a {@link RexLiteral} to a {@link SqlLiteral}. */
+  public static SqlNode toSql(RexLiteral literal) {
+    SqlTypeName typeName = literal.getTypeName();
+    switch (typeName) {
+    case SYMBOL:
+      final Enum symbol = (Enum) literal.getValue();
+      return SqlLiteral.createSymbol(symbol, POS);
+
+    case ROW:
+      //noinspection unchecked
+      final List<RexLiteral> list = castNonNull(literal.getValueAs(List.class));
+      return SqlStdOperatorTable.ROW.createCall(POS,
+          list.stream().map(e -> toSql(e))
+              .collect(Util.toImmutableList()));
+
+    case SARG:
+      final Sarg arg = literal.getValueAs(Sarg.class);
+      throw new AssertionError("sargs [" + arg
+          + "] should be handled as part of predicates, not as literals");
+    default:
+      break;
+    }
+    SqlTypeFamily family =
+        requireNonNull(typeName.getFamily(),
+            () -> "literal " + literal
+                + " has null SqlTypeFamily, and is SqlTypeName is " + typeName);
+    switch (family) {
+    case CHARACTER: {
+      final NlsString value = literal.getValueAs(NlsString.class);
+      if (value != null) {
+        final String defaultCharset = CalciteSystemProperty.DEFAULT_CHARSET.value();
+        final String charsetName = value.getCharsetName();
+        if (!defaultCharset.equals(charsetName)) {
+          // Set the charset only if it is not the same as the default charset
+          return SqlLiteral.createCharString(
+              castNonNull(value).getValue(), charsetName, POS);
+        }
+      }
+      // Create a string without specifying a charset
+      return SqlLiteral.createCharString((String) castNonNull(literal.getValue2()), POS);
+    }
+    case NUMERIC:
+    case EXACT_NUMERIC:
+      return SqlLiteral.createExactNumeric(
+          castNonNull(literal.getValueAs(BigDecimal.class)).toPlainString(), POS);
+    case APPROXIMATE_NUMERIC:
+      return SqlLiteral.createApproxNumeric(
+          castNonNull(literal.getValueAs(BigDecimal.class)).toPlainString(), POS);
+    case BOOLEAN:
+      return SqlLiteral.createBoolean(castNonNull(literal.getValueAs(Boolean.class)),
+          POS);
+    case INTERVAL_YEAR_MONTH:
+    case INTERVAL_DAY_TIME:
+      final boolean negative = castNonNull(literal.getValueAs(Boolean.class));
+      return SqlLiteral.createInterval(negative ? -1 : 1,
+          castNonNull(literal.getValueAs(String.class)),
+          castNonNull(literal.getType().getIntervalQualifier()), POS);
+    case DATE:
+      return SqlLiteral.createDate(castNonNull(literal.getValueAs(DateString.class)),
+          POS);
+    case TIME:
+      return SqlLiteral.createTime(castNonNull(literal.getValueAs(TimeString.class)),
+          literal.getType().getPrecision(), POS);
+    case TIMESTAMP:
+      return SqlLiteral.createTimestamp(typeName,
+          castNonNull(literal.getValueAs(TimestampString.class)),
+          literal.getType().getPrecision(), POS);
+    case BINARY:
+      return SqlLiteral.createBinaryString(castNonNull(literal.getValueAs(byte[].class)), POS);
+    case ANY:
+    case NULL:
+      switch (typeName) {
+      case NULL:
+        return SqlLiteral.createNull(POS);
+      default:
+        break;
+      }
+      // fall through
+    default:
+      throw new AssertionError(literal + ": " + typeName);
     }
   }
 
