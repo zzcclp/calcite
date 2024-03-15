@@ -81,6 +81,11 @@ public final class LogicalWindow extends Window {
       rowType, groups);
   }
 
+  @Override public Window copy(List<RexLiteral> constants) {
+    return new LogicalWindow(getCluster(), getTraitSet(), getInput(),
+        constants, getRowType(), groups);
+  }
+
   /**
    * Creates a LogicalWindow.
    *

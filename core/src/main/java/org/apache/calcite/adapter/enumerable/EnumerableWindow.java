@@ -78,9 +78,18 @@ public class EnumerableWindow extends Window implements EnumerableRel {
         constants, rowType, groups);
   }
 
-  public RelOptCost computeSelfCost(RelOptPlanner planner, RelMetadataQuery mq) {
-    return super.computeSelfCost(planner, mq)
-        .multiplyBy(EnumerableConvention.COST_MULTIPLIER);
+  @Override public Window copy(List<RexLiteral> constants) {
+    return new EnumerableWindow(getCluster(), getTraitSet(), getInput(),
+        constants, getRowType(), groups);
+  }
+
+  @Override public @Nullable RelOptCost computeSelfCost(RelOptPlanner planner,
+      RelMetadataQuery mq) {
+    RelOptCost cost = super.computeSelfCost(planner, mq);
+    if (cost == null) {
+      return null;
+    }
+    return cost.multiplyBy(EnumerableConvention.COST_MULTIPLIER);
   }
 
   /** Implementation of {@link RexToLixTranslator.InputGetter}

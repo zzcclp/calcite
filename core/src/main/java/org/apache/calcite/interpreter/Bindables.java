@@ -725,7 +725,12 @@ public class Bindables {
           constants, rowType, groups);
     }
 
-    @Override public RelOptCost computeSelfCost(RelOptPlanner planner,
+    @Override public Window copy(List<RexLiteral> constants) {
+      return new BindableWindow(getCluster(), traitSet, getInput(),
+          constants, getRowType(), groups);
+    }
+
+    @Override public @Nullable RelOptCost computeSelfCost(RelOptPlanner planner,
         RelMetadataQuery mq) {
       return super.computeSelfCost(planner, mq)
           .multiplyBy(BindableConvention.COST_MULTIPLIER);
